@@ -266,9 +266,7 @@ class RundeckApiTolerant(object):
         if 'jobExactFilter' in params or 'groupPathExact' in params:
             self.requires_version(2)
 
-        params['project'] = project
-
-        return self._exec(GET, 'jobs', params=params, **kwargs)
+        return self._exec(GET, 'project/{project}/jobs'.format(project=project), params=params, **kwargs)
 
 
     def project_jobs(self, project, **kwargs):
@@ -358,7 +356,7 @@ class RundeckApiTolerant(object):
         if argString is not None:
             params['argString'] = dict2argstring(argString)
 
-        return self._exec(GET, 'job/{0}/run'.format(job_id), params=params, **kwargs)
+        return self._exec(POST, 'job/{0}/run'.format(job_id), data=params, **kwargs)
 
 
     def jobs_export(self, project, **kwargs):
