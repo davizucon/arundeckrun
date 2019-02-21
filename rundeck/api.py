@@ -10,22 +10,23 @@ __docformat__ = "restructuredtext en"
 
 from functools import partial
 from xml.sax.saxutils import quoteattr
+
 try:
     from urllib import quote as urlquote
 except ImportError:
     # python 3
     from urllib.parse import quote as urlquote
 
-from connection import RundeckConnectionTolerant, RundeckConnection
-from util import cull_kwargs, dict2argstring, StringType
-from rd_exceptions import (
+from .connection import RundeckConnectionTolerant, RundeckConnection
+from .util import cull_kwargs, dict2argstring, StringType
+from .rd_exceptions import (
     InvalidResponseFormat,
     InvalidJobDefinitionFormat,
     InvalidDupeOption,
     InvalidUuidOption,
     HTTPError
-    )
-from defaults import (
+)
+from .defaults import (
     GET,
     POST,
     PUT,
@@ -35,7 +36,8 @@ from defaults import (
     JobDefFormat,
     ExecutionOutputFormat,
     RUNDECK_API_VERSION,
-    )
+)
+
 
 def api_version_check(api_version, required_version):
     """Raises a NotImplementedError if the api_version of the connection isn't sufficient
@@ -114,7 +116,6 @@ class RundeckNode(object):
         self.remoteUrl = kwargs.get('remoteUrl', None)
         self.attributes = kwargs.get('attributes', None)
 
-
     def serialize(self):
         """serializes the instance to XML
 
@@ -134,7 +135,7 @@ class RundeckNode(object):
         )
 
         data = {k: getattr(self, k)
-                    for k in node_attr_keys if getattr(self, k, None) is not None}
+                for k in node_attr_keys if getattr(self, k, None) is not None}
 
         if self.tags is not None and hasattr(self.tags, '__iter__'):
             data['tags'] = ','.join(self.tags)
@@ -146,14 +147,13 @@ class RundeckNode(object):
         node_attributes = ''
         if self.attributes is not None and isinstance(self.attributes, dict):
             node_attributes = ''.join(['<attribute name="{0}" value="{1}" />'.format(k, v)
-                                for k, v in self.attributes.items()])
+                                       for k, v in self.attributes.items()])
 
         return '<node {0}>{1}</node>'.format(node_xml_attrs, node_attributes)
 
     @property
     def xml(self):
         return self.serialize()
-
 
 
 class RundeckApiTolerant(object):
@@ -203,7 +203,6 @@ class RundeckApiTolerant(object):
 
         self.requires_version = partial(api_version_check, self.connection.api_version)
 
-
     def _exec(self, method, url, params=None, data=None, parse_response=True, **kwargs):
         """ Executes a request to Rundeck via the RundeckConnection
 
@@ -227,7 +226,6 @@ class RundeckApiTolerant(object):
         return self.connection.call(
             method, url, params=params, data=data, parse_response=parse_response, **kwargs)
 
-
     def system_info(self, **kwargs):
         """Wraps `Rundeck API GET /system/info <http://rundeck.org/docs/api/index.html#system-info>`_
 
@@ -235,7 +233,6 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         return self._exec(GET, 'system/info', **kwargs)
-
 
     def jobs(self, project, **kwargs):
         """Wraps `Rundeck API GET /jobs <http://rundeck.org/docs/api/index.html#listing-jobs>`_
@@ -268,7 +265,6 @@ class RundeckApiTolerant(object):
 
         return self._exec(GET, 'project/{project}/jobs'.format(project=project), params=params, **kwargs)
 
-
     def project_jobs(self, project, **kwargs):
         """ Simulates `Rundeck API GET /project/[NAME]/jobs <http://rundeck.org/docs/api/index.html#listing-jobs-for-a-project>`_
             **Note**: Can't find any difference between this and /jobs, so this method is just a
@@ -296,7 +292,6 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         return self.jobs(project, **kwargs)
-
 
     def job_run(self, job_id, **kwargs):
         """Wraps `Rundeck API GET /job/[ID]/run <http://rundeck.org/docs/api/index.html#running-a-job>`_
@@ -348,16 +343,15 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         params = cull_kwargs(('argString', 'loglevel', 'asUser', 'exclude-precedence', \
-            'hostname', 'tags', 'os-name', 'os-family', 'os-arch', 'os-version', 'name', \
-            'exlude-hostname', 'exlude-tags', 'exlude-os-name', 'exlude-os-family', \
-            'exlude-os-arch', 'exlude-os-version', 'exlude-name'), kwargs)
+                              'hostname', 'tags', 'os-name', 'os-family', 'os-arch', 'os-version', 'name', \
+                              'exlude-hostname', 'exlude-tags', 'exlude-os-name', 'exlude-os-family', \
+                              'exlude-os-arch', 'exlude-os-version', 'exlude-name'), kwargs)
 
         argString = params.get('argString', None)
         if argString is not None:
             params['argString'] = dict2argstring(argString)
 
         return self._exec(POST, 'job/{0}/run'.format(job_id), data=params, **kwargs)
-
 
     def jobs_export(self, project, **kwargs):
         """Wraps `Rundeck API GET /jobs/export <http://rundeck.org/docs/api/index.html#exporting-jobs>`_
@@ -386,7 +380,6 @@ class RundeckApiTolerant(object):
         params['project'] = project
 
         return self._exec(GET, 'jobs/export', params=params, parse_response=False, **kwargs)
-
 
     def jobs_import(self, definition, **kwargs):
         """Wraps `Rundeck API POST /jobs/import <http://rundeck.org/docs/api/index.html#importing-jobs>`_
@@ -418,7 +411,6 @@ class RundeckApiTolerant(object):
 
         return self._exec(POST, 'jobs/import', data=data, **kwargs)
 
-
     def job(self, job_id, **kwargs):
         """Wraps `Rundeck API GET /job/[ID] <http://rundeck.org/docs/api/index.html#getting-a-job-definition>`_
 
@@ -441,7 +433,6 @@ class RundeckApiTolerant(object):
 
         return self._exec(GET, 'job/{0}'.format(job_id), params=params, parse_response=False, **kwargs)
 
-
     def delete_job(self, job_id, **kwargs):
         """Wraps `Rundeck API DELETE /job/[ID] <http://rundeck.org/docs/api/index.html#deleting-a-job-definition>`_
 
@@ -453,7 +444,6 @@ class RundeckApiTolerant(object):
         :rtype: requests.models.Response
         """
         return self._exec(DELETE, 'job/{0}'.format(job_id), parse_response=False, **kwargs)
-
 
     def jobs_delete(self, idlist, **kwargs):
         """Wraps `Rundeck API POST /jobs/delete <http://rundeck.org/docs/api/index.html#importing-jobs>`_
@@ -470,14 +460,13 @@ class RundeckApiTolerant(object):
 
         data = {
             'idlist': idlist,
-            }
+        }
 
         try:
             return self._exec(POST, 'jobs/delete', data=data, **kwargs)
         except Exception as exc:
             # TODO: what on earth did I do there?!?! need to fix this
             raise
-
 
     def job_executions(self, job_id, **kwargs):
         """Wraps `Rundeck API GET /job/[ID]/executions <http://rundeck.org/docs/api/index.html#getting-executions-for-a-job>`_
@@ -500,7 +489,6 @@ class RundeckApiTolerant(object):
         params = cull_kwargs(('status', 'max', 'offset'), kwargs)
         return self._exec(GET, 'job/{0}/executions'.format(job_id), params=params, **kwargs)
 
-
     def executions_running(self, project, **kwargs):
         """Wraps `Rundeck API GET /executions/running <http://rundeck.org/docs/api/index.html#listing-running-executions>`_
 
@@ -514,7 +502,6 @@ class RundeckApiTolerant(object):
         params = {'project': project}
         return self._exec(GET, 'executions/running', params=params, **kwargs)
 
-
     def execution(self, execution_id, **kwargs):
         """Wraps `Rundeck API GET /execution/[ID] <http://rundeck.org/docs/api/index.html#getting-execution-info>`_
 
@@ -526,7 +513,6 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         return self._exec(GET, 'execution/{0}'.format(execution_id), **kwargs)
-
 
     def executions(self, project, **kwargs):
         """Wraps `Rundeck API GET /executions <http://rundeck.org/docs/api/index.html#getting-execution-info>`_
@@ -593,14 +579,13 @@ class RundeckApiTolerant(object):
         self.requires_version(5)
 
         params = cull_kwargs(('statusFilter', 'abortedbyFilter', 'userFilter', 'recentFilter', \
-            'begin', 'end', 'adhoc', 'jobIdListFilter', 'excludeJobIdListFilter', \
-            'jobListFilter', 'excludeJobListFilter', 'groupPath', 'groupPathExact', \
-            'excludeGroupPath', 'excludeGroupPathExact', 'jobExactFilter', \
-            'exludeJobExactFilter', 'max', 'offset'), kwargs)
+                              'begin', 'end', 'adhoc', 'jobIdListFilter', 'excludeJobIdListFilter', \
+                              'jobListFilter', 'excludeJobListFilter', 'groupPath', 'groupPathExact', \
+                              'excludeGroupPath', 'excludeGroupPathExact', 'jobExactFilter', \
+                              'exludeJobExactFilter', 'max', 'offset'), kwargs)
         params['project'] = project
 
         return self._exec(GET, 'executions', params=params, **kwargs)
-
 
     def execution_output(self, execution_id, **kwargs):
         """Wraps `Rundeck API GET /execution/[ID]/output <http://rundeck.org/docs/api/index.html#execution-output>`_
@@ -633,7 +618,6 @@ class RundeckApiTolerant(object):
 
         return self._exec(GET, 'execution/{0}/output'.format(execution_id), params=params, parse_response=parse_response, **kwargs)
 
-
     def execution_abort(self, execution_id, **kwargs):
         """Wraps `Rundeck API GET /execution/[ID]/output <http://rundeck.org/docs/api/index.html#execution-output>`_
 
@@ -650,7 +634,6 @@ class RundeckApiTolerant(object):
         """
         params = cull_kwargs(('asUser',), kwargs)
         return self._exec(GET, 'execution/{0}/abort'.format(execution_id), params=params, **kwargs)
-
 
     def run_command(self, project, command, **kwargs):
         """Wraps `Rundeck API GET /run/command <http://rundeck.org/docs/api/index.html#running-adhoc-commands>`_
@@ -703,15 +686,14 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         params = cull_kwargs(('nodeThreadcount', 'nodeKeepgoing', 'asUser', 'hostname', 'tags', \
-            'os-name', 'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', \
-            'exlude-tags', 'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', \
-            'exlude-os-version', 'exlude-name'), kwargs)
+                              'os-name', 'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', \
+                              'exlude-tags', 'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', \
+                              'exlude-os-version', 'exlude-name'), kwargs)
 
         params['project'] = project
         params['exec'] = command
 
         return self._exec(GET, 'run/command', params=params, **kwargs)
-
 
     def run_script(self, project, scriptFile, **kwargs):
         """Wraps `Rundeck API POST /run/script <http://rundeck.org/docs/api/index.html#running-adhoc-scripts>`_
@@ -772,10 +754,10 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         params = cull_kwargs(('argString', 'nodeThreadcount', 'nodeKeepgoing', 'asUser', \
-            'scriptInterpreter', 'interpreterArgsQuoted', 'hostname', 'tags', 'os-name', \
-            'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', 'exlude-tags', \
-            'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', 'exlude-os-version', \
-            'exlude-name'), kwargs)
+                              'scriptInterpreter', 'interpreterArgsQuoted', 'hostname', 'tags', 'os-name', \
+                              'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', 'exlude-tags', \
+                              'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', 'exlude-os-version', \
+                              'exlude-name'), kwargs)
 
         params['project'] = project
         files = {'scriptFile': scriptFile}
@@ -787,9 +769,7 @@ class RundeckApiTolerant(object):
         if argString is not None:
             params['argString'] = dict2argstring(argString)
 
-
         return self._exec(POST, 'run/script', params=params, files=files, **kwargs)
-
 
     def run_url(self, project, scriptURL, **kwargs):
         """Wraps `Rundeck API POST /run/url <http://rundeck.org/docs/api/index.html#running-adhoc-script-urls>`_
@@ -853,10 +833,10 @@ class RundeckApiTolerant(object):
         self.requires_version(4)
 
         data = cull_kwargs(('argString', 'nodeThreadcount', 'nodeKeepgoing', 'asUser', \
-            'scriptInterpreter', 'interpreterArgsQuoted', 'hostname', 'tags', 'os-name', \
-            'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', 'exlude-tags', \
-            'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', 'exlude-os-version', \
-            'exlude-name'), kwargs)
+                            'scriptInterpreter', 'interpreterArgsQuoted', 'hostname', 'tags', 'os-name', \
+                            'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', 'exlude-tags', \
+                            'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', 'exlude-os-version', \
+                            'exlude-name'), kwargs)
 
         data['project'] = project
         data['scriptURL'] = scriptURL
@@ -869,7 +849,6 @@ class RundeckApiTolerant(object):
             data['argString'] = dict2argstring(argString)
 
         return self._exec(POST, 'run/url', data=data, **kwargs)
-
 
     def _post_projects(self, project, **kwargs):
         """Wraps `Rundeck API POST /projects <http://rundeck.org/docs/api/index.html#project-creation>`_
@@ -891,9 +870,9 @@ class RundeckApiTolerant(object):
         config = kwargs.pop('config', None)
 
         prop_tmpl = '<property key="{0}" value="{1}" />'
-        config_tmpl =  '  <config>\n' + \
-                       '    {0}\n' + \
-                       '  </config>\n'
+        config_tmpl = '  <config>\n' + \
+                      '    {0}\n' + \
+                      '  </config>\n'
         project_tmpl = '<project>\n' + \
                        '  <name>{0}</name>\n' + \
                        '{1}</project>'
@@ -911,7 +890,6 @@ class RundeckApiTolerant(object):
 
         return self._exec(POST, 'projects', data=xml, headers=headers, **kwargs)
 
-
     def _get_projects(self, **kwargs):
         """Wraps `Rundeck API GET /projects <http://rundeck.org/docs/api/index.html#listing-projects>`_
 
@@ -919,7 +897,6 @@ class RundeckApiTolerant(object):
         :rtype: :class:`~.rundeck.connection.RundeckResponse`
         """
         return self._exec(GET, 'projects', **kwargs)
-
 
     def projects(self, method=GET, **kwargs):
         """An interface to the Rundeck `projects` API endpoint support
@@ -935,7 +912,6 @@ class RundeckApiTolerant(object):
             return self._get_projects(**kwargs)
         elif method == POST:
             return self._post_projects(**kwargs)
-
 
     def project(self, project, **kwargs):
         """Wraps `Rundeck API /project/[NAME] <http://rundeck.org/docs/api/index.html#getting-project-info>`_
@@ -975,7 +951,6 @@ class RundeckApiTolerant(object):
                 raise
 
         return project
-
 
     def project_resources(self, project, **kwargs):
         """Wraps `Rundeck API GET /project/[NAME]/resources <http://rundeck.org/docs/api/index.html#updating-and-listing-resources-for-a-project>`_
@@ -1023,15 +998,14 @@ class RundeckApiTolerant(object):
         self.requires_version(2)
 
         params = cull_kwargs(('fmt', 'scriptInterpreter', 'interpreterArgsQuoted', 'hostname', \
-            'tags', 'os-name', 'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', \
-            'exlude-tags', 'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', \
-            'exlude-os-version', 'exlude-name'), kwargs)
+                              'tags', 'os-name', 'os-family', 'os-arch', 'os-version', 'name', 'exlude-hostname', \
+                              'exlude-tags', 'exlude-os-name', 'exlude-os-family', 'exlude-os-arch', \
+                              'exlude-os-version', 'exlude-name'), kwargs)
 
         if 'fmt' in params:
             params['format'] = params.pop('fmt')
 
         return self._exec(GET, 'project/{0}/resources'.format(urlquote(project)), params=params, **kwargs)
-
 
     def project_resources_update(self, project, nodes, **kwargs):
         """Wraps `Rundeck API POST /project/[NAME]/resources <http://rundeck.org/docs/api/index.html#updating-and-listing-resources-for-a-project>`_
@@ -1050,7 +1024,6 @@ class RundeckApiTolerant(object):
         data = '<nodes>{0}</nodes>'.format('\n'.join([node.xml for node in nodes]))
 
         return self._exec(POST, 'project/{0}/resources'.format(urlquote(project)), data=data, headers=headers, **kwargs)
-
 
     def project_resources_refresh(self, project, providerURL=None, **kwargs):
         """Wraps `Rundeck API POST /project/[NAME]/resources/refresh <http://rundeck.org/docs/api/index.html#refreshing-resources-for-a-project>`_
@@ -1074,35 +1047,34 @@ class RundeckApiTolerant(object):
         return self._exec(POST, 'project/{0}/resources/refresh'.format(project), data=data, **kwargs)
 
     def project_archive_import(self, project, archive_zip_data, **kwargs):
-      """Wraps `Rundeck API PUT /api/14/project/[PROJECT]/import <http://rundeck.org/docs/api/index.html#project-archive-import>`_
+        """Wraps `Rundeck API PUT /api/14/project/[PROJECT]/import <http://rundeck.org/docs/api/index.html#project-archive-import>`_
 
-      :Parameters:
-          project : str
-              name of the project
-          archive_zip_data : ?
-              Zip file containing a project archive.
+        :Parameters:
+            project : str
+                name of the project
+            archive_zip_data : ?
+                Zip file containing a project archive.
 
-      :Keywords:
-          jobUuidOption : str ('preserve'|'remove')
-              Option declaring how duplicate Job UUIDs should be handled. If preserve (default) then
-              imported job UUIDs will not be modified, and may conflict with jobs in other projects.
-              If remove then all job UUIDs will be removed before importing.
-          importExecutions : bool
-               import all executions and logs from the archive (default: true)
-          importConfig : bool
-               import project configurationfrom the archive (default: true)
-          importACL : bool
-               import all of the ACL policies from the archive (default: true)
+        :Keywords:
+            jobUuidOption : str ('preserve'|'remove')
+                Option declaring how duplicate Job UUIDs should be handled. If preserve (default) then
+                imported job UUIDs will not be modified, and may conflict with jobs in other projects.
+                If remove then all job UUIDs will be removed before importing.
+            importExecutions : bool
+                 import all executions and logs from the archive (default: true)
+            importConfig : bool
+                 import project configurationfrom the archive (default: true)
+            importACL : bool
+                 import all of the ACL policies from the archive (default: true)
 
-      :return: A :class:`~.rundeck.connection.RundeckResponse`
-      :rtype: :class:`~.rundeck.connection.RundeckResponse`
-      """
-      data = cull_kwargs(('jobUuidOption', 'importExecutions', 'importConfig', 'importACL'), kwargs)
+        :return: A :class:`~.rundeck.connection.RundeckResponse`
+        :rtype: :class:`~.rundeck.connection.RundeckResponse`
+        """
+        data = cull_kwargs(('jobUuidOption', 'importExecutions', 'importConfig', 'importACL'), kwargs)
 
-      headers = {'Content-Type': 'application/zip'}
+        headers = {'Content-Type': 'application/zip'}
 
-      return self._exec(PUT, 'project/{0}/import'.format(urlquote(project)), params=data, data=archive_zip_data, headers=headers, **kwargs)
-
+        return self._exec(PUT, 'project/{0}/import'.format(urlquote(project)), params=data, data=archive_zip_data, headers=headers, **kwargs)
 
     def history(self, project, **kwargs):
         """Wraps `Rundeck API GET /history <http://rundeck.org/docs/api/index.html#listing-history>`_
@@ -1151,8 +1123,8 @@ class RundeckApiTolerant(object):
         """
         self.requires_version(4)
         params = cull_kwargs(('jobIdFilter', 'reportIdFilter', 'userFilter', 'statFilter', \
-            'jobListFilter', 'excludeJobListFilter', 'recentFilter', 'begin', 'end', 'max', \
-            'offset'), kwargs)
+                              'jobListFilter', 'excludeJobListFilter', 'recentFilter', 'begin', 'end', 'max', \
+                              'offset'), kwargs)
         params['project'] = project
         return self._exec(GET, 'history', params=params, **kwargs)
 
@@ -1161,6 +1133,7 @@ class RundeckApi(RundeckApiTolerant):
     """ Same as RundeckApiTolerant and complains on every Rundeck Server error or 4xx/5xx HTTP
     status code.
     """
+
     def _exec(self, method, url, params=None, data=None, parse_response=True, **kwargs):
         quiet = kwargs.get('quiet', False)
 
